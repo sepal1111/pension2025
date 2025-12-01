@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教師退撫基金提撥成本統計 (含投資效益)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f0fdfa; } /* 淺青色背景區隔 */
+        .input-group label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
+        .input-roc { display: flex; align-items: center; gap: 0.5rem; }
+        .input-roc input { width: 100%; border: 1px solid #d1d5db; padding: 0.5rem; border-radius: 0.375rem; }
+        .section-card { background: white; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        
+        /* Table styles */
+        .table-container { overflow-x: auto; max-height: 500px; }
+        thead th { position: sticky; top: 0; background-color: #f9fafb; z-index: 10; }
+        tr.is-leave { background-color: #fef2f2; color: #991b1b; }
+    </style>
+</head>
+<body class="p-4 md:p-8 text-gray-800">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-teal-800 mb-2">
+                <i class="fas fa-piggy-bank text-teal-600 mr-2"></i>教師退撫基金提撥與投資效益統計
+            </h1>
+            <p class="text-gray-500">計算個人與政府提撥總額，並依據自訂報酬率推算複利累積總值</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            
+            <!-- 左側設置區 (與退休試算相同邏輯) -->
+            <div class="xl:col-span-4 space-y-6">
+                
+                <div class="section-card border-l-4 border-teal-500">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user-clock mr-2 text-teal-500"></i>任職與投資設定
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="input-group">
+                            <label>初任學歷</label>
+                            <select id="degree" class="w-full border p-2 rounded bg-gray-50">
+                                <option value="bachelor" selected>大學 (起敘26級)</option>
+                                <option value="master">碩士 (起敘21級)</option>
+                                <option value="phd">博士 (起敘16級)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>出生日期 (民國)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="birthY" class="border p-2 rounded w-20" value="70">
+                                <span class="self-center">年</span>
+                                <input type="number" id="birthM" class="border p-2 rounded w-16" value="1">
+                                <span class="self-center">月</span>
+                                <input type="number" id="birthD" class="border p-2 rounded w-16" value="1">
+                                <span class="self-center">日</span>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>初任教職 (民國)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="startY" class="border p-2 rounded w-20" value="95">
+                                <span class="self-center">年</span>
+                                <input type="number" id="startM" class="border p-2 rounded w-16" value="8">
+                                <span class="self-center">月</span>
+                                <input type="number" id="startD" class="border p-2 rounded w-16" value="1">
+                                <span class="self-center">日</span>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>預計退休 (民國)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="retireY" class="border p-2 rounded w-20" value="125">
+                                <span class="self-center">年</span>
+                                <input type="number" id="retireM" class="border p-2 rounded w-16" value="8">
+                                <span class="self-center">月</span>
+                                <input type="number" id="retireD" class="border p-2 rounded w-16" value="1">
+                                <span class="self-center">日</span>
+                            </div>
+                        </div>
+
+                        <!-- 投資報酬率設定 -->
+                        <div class="input-group pt-4 border-t border-gray-100">
+                            <label class="text-teal-700 font-bold"><i class="fas fa-chart-line mr-1"></i>預估年報酬率 (%)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="roiRate" class="border p-2 rounded w-full border-teal-300 focus:ring-teal-500 bg-teal-50" value="4.0" step="0.1">
+                                <span class="text-gray-500">%</span>
+                            </div>
+                            <p class="text-xs text-gray-400 mt-1">退撫基金歷年平均收益率約為 4% 左右</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card border-l-4 border-gray-400">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">
+                        <i class="fas fa-sliders-h mr-2 text-gray-500"></i>特殊歷程
+                    </h2>
+                    
+                    <!-- 改敘 -->
+                    <div class="mb-4">
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-bold">學歷改敘</label>
+                            <button onclick="addEventRow('reeval')" class="text-xs bg-gray-200 px-2 rounded"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div id="reevalList" class="space-y-2 text-sm"></div>
+                    </div>
+
+                    <!-- 留停 -->
+                    <div class="mb-4">
+                        <div class="flex justify-between mb-2">
+                            <label class="text-sm font-bold">留職停薪</label>
+                            <button onclick="addEventRow('leave')" class="text-xs bg-gray-200 px-2 rounded"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <div id="leaveList" class="space-y-2 text-sm"></div>
+                        <p class="text-xs text-gray-400 mt-1">留停期間停止提撥退撫基金</p>
+                    </div>
+                </div>
+
+                <button onclick="calculate()" class="w-full bg-teal-600 text-white py-3 rounded-lg font-bold shadow hover:bg-teal-700 transition">
+                    <i class="fas fa-coins mr-2"></i> 開始試算
+                </button>
+            </div>
+
+            <!-- 右側統計區 -->
+            <div class="xl:col-span-8 space-y-6">
+                
+                <!-- 總計卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- 個人負擔 -->
+                    <div class="bg-white p-4 rounded-xl shadow border-t-4 border-orange-400">
+                        <p class="text-xs text-gray-500 font-bold mb-1">個人本金投入 (35%)</p>
+                        <h3 class="text-xl font-bold text-orange-600" id="totalSelf">--</h3>
+                    </div>
+
+                    <!-- 政府負擔 -->
+                    <div class="bg-white p-4 rounded-xl shadow border-t-4 border-blue-400">
+                        <p class="text-xs text-gray-500 font-bold mb-1">政府本金投入 (65%)</p>
+                        <h3 class="text-xl font-bold text-blue-600" id="totalGov">--</h3>
+                    </div>
+
+                    <!-- 累積總值 (含利息) -->
+                    <div class="bg-white p-4 rounded-xl shadow border-t-4 border-teal-500">
+                        <p class="text-xs text-gray-500 font-bold mb-1">基金累積總值 (含收益)</p>
+                        <h3 class="text-2xl font-bold text-teal-600" id="grandTotalWithROI">--</h3>
+                        <p class="text-xs text-teal-500 mt-1">投資獲利：<span id="totalGain">--</span></p>
+                    </div>
+                </div>
+                
+                <!-- 總和與圖表 -->
+                <div class="bg-white p-6 rounded-xl shadow">
+                    <div class="flex flex-col md:flex-row items-center gap-8">
+                        <div class="flex-1 w-full">
+                            <h3 class="font-bold text-gray-700 mb-4">資金結構分佈</h3>
+                            <div class="relative h-56 w-full">
+                                <canvas id="fundChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="flex-1 space-y-4 w-full border-l pl-0 md:pl-8 border-gray-100">
+                            <h4 class="font-bold text-gray-800">計算說明</h4>
+                            <div class="text-sm text-gray-600 space-y-2">
+                                <p><i class="fas fa-check-circle text-teal-500 mr-1"></i><strong>提撥本金：</strong> 個人與政府歷年提撥之總和。</p>
+                                <p><i class="fas fa-check-circle text-teal-500 mr-1"></i><strong>複利計算：</strong> 以年度為單位結算。</p>
+                                <div class="bg-gray-50 p-3 rounded text-xs leading-relaxed text-gray-500">
+                                    當年度基金總值 = <br>
+                                    (上年度累積總值 × (1 + 報酬率)) + <br>
+                                    (本年度提撥金額) + <br>
+                                    (本年度提撥金額 × 報酬率 ÷ 2)
+                                    <div class="mt-1 text-gray-400">* 假設本年度提撥金額平均年中投入，故收益減半計算</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 詳細明細表 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col h-[500px]">
+                    <div class="p-3 bg-gray-100 border-b font-bold text-gray-700 text-sm flex justify-between">
+                        <span>歷年提撥與投資明細 (學年度制)</span>
+                        <span class="text-xs text-gray-500 self-center">金額單位：新台幣元</span>
+                    </div>
+                    <div class="table-container flex-grow">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="text-gray-600 border-b bg-gray-50 text-xs">
+                                    <th class="p-2 text-center whitespace-nowrap">學年度</th>
+                                    <th class="p-2 text-center whitespace-nowrap">薪級</th>
+                                    <th class="p-2 text-right whitespace-nowrap">本俸</th>
+                                    <th class="p-2 text-right text-orange-600 whitespace-nowrap">個人提撥</th>
+                                    <th class="p-2 text-right text-blue-600 whitespace-nowrap">政府提撥</th>
+                                    <th class="p-2 text-right font-bold whitespace-nowrap">本年收益</th>
+                                    <th class="p-2 text-right font-bold text-teal-700 whitespace-nowrap">期末累計總值</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultBody" class="divide-y divide-gray-100">
+                                <!-- JS Render -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="mt-8 text-center text-sm text-gray-500 pb-8">
+            <p>資料來源為 114.1.1 教師薪資表與 114.11.30 前的計算公式</p>
+        </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="tmpl-reeval">
+        <div class="flex flex-col gap-1 bg-gray-100 p-2 rounded mb-1 row-item">
+            <div class="flex gap-2">
+                <input type="text" placeholder="YYY/MM/DD" class="w-24 text-xs p-1 border rounded reeval-date">
+                <input type="number" placeholder="級" class="w-10 text-xs p-1 border rounded reeval-jump">
+                <select class="text-xs p-1 border rounded reeval-new-degree">
+                    <option value="none">不變頂</option>
+                    <option value="master">碩頂</option>
+                    <option value="phd">博頂</option>
+                </select>
+                <button onclick="removeRow(this)" class="text-red-500"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+    </template>
+    
+    <template id="tmpl-leave">
+        <div class="flex gap-1 bg-red-50 p-2 rounded mb-1 row-item items-center">
+            <input type="text" placeholder="起 YYY/MM/DD" class="w-24 text-xs p-1 border rounded leave-start">
+            <span>~</span>
+            <input type="text" placeholder="迄 YYY/MM/DD" class="w-24 text-xs p-1 border rounded leave-end">
+            <button onclick="removeRow(this)" class="text-red-500"><i class="fas fa-times"></i></button>
+        </div>
+    </template>
+
+    <script>
+        // --- 1. 核心資料 ---
+        const salaryData = {
+            1: { point: 680, money: 57220 }, 2: { point: 650, money: 55690 }, 3: { point: 625, money: 54160 },
+            4: { point: 600, money: 52630 }, 5: { point: 575, money: 51100 }, 6: { point: 550, money: 49560 },
+            7: { point: 525, money: 48030 }, 8: { point: 500, money: 46500 }, 9: { point: 475, money: 44970 },
+            10: { point: 450, money: 41900 }, 11: { point: 430, money: 40760 }, 12: { point: 410, money: 39610 },
+            13: { point: 390, money: 38460 }, 14: { point: 370, money: 37310 }, 15: { point: 350, money: 36160 },
+            16: { point: 330, money: 35010 }, 17: { point: 310, money: 33860 }, 18: { point: 290, money: 32710 },
+            19: { point: 275, money: 31560 }, 20: { point: 260, money: 30410 }, 21: { point: 245, money: 29270 },
+            22: { point: 230, money: 28120 }, 23: { point: 220, money: 27350 }, 24: { point: 210, money: 26580 },
+            25: { point: 200, money: 25820 }, 26: { point: 190, money: 25050 }
+        };
+
+        const degreeConfig = {
+            'bachelor': { start: 26, max: 625 },
+            'master':   { start: 21, max: 650 },
+            'phd':      { start: 16, max: 680 }
+        };
+
+        let myChart = null;
+
+        // --- 2. 輔助函數 ---
+        function parseRocString(str) {
+            str = str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0)).trim();
+            const parts = str.split(/[\/\-\.]/);
+            if (parts.length < 3) return null;
+            return new Date(parseInt(parts[0]) + 1911, parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+
+        function formatMoney(num) {
+            return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(num);
+        }
+
+        function getAcademicYear(date) {
+            return (date.getMonth() + 1 >= 8) ? date.getFullYear() - 1911 : date.getFullYear() - 1911 - 1;
+        }
+        
+        function getOverlapDays(start1, end1, start2, end2) {
+            const s = start1 > start2 ? start1 : start2;
+            const e = end1 < end2 ? end1 : end2;
+            if (s > e) return 0;
+            return Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        // --- 3. UI 操作 ---
+        function addEventRow(type) {
+            const tmpl = document.getElementById(`tmpl-${type}`);
+            const clone = tmpl.content.cloneNode(true);
+            document.getElementById(`${type}List`).appendChild(clone);
+        }
+        function removeRow(btn) { btn.closest('.row-item').remove(); }
+
+        // --- 4. 計算邏輯 ---
+        function calculate() {
+            // 讀取輸入
+            const deg = document.getElementById('degree').value;
+            const birthY = parseInt(document.getElementById('birthY').value);
+            const startY = parseInt(document.getElementById('startY').value);
+            const retireY = parseInt(document.getElementById('retireY').value);
+            const roiRate = parseFloat(document.getElementById('roiRate').value) / 100 || 0;
+
+            const birthDate = new Date(birthY + 1911, parseInt(document.getElementById('birthM').value)-1, parseInt(document.getElementById('birthD').value));
+            const startDate = new Date(startY + 1911, parseInt(document.getElementById('startM').value)-1, parseInt(document.getElementById('startD').value));
+            const retireDate = new Date(retireY + 1911, parseInt(document.getElementById('retireM').value)-1, parseInt(document.getElementById('retireD').value));
+
+            if (retireDate <= startDate) { alert("退休日需晚於任職日"); return; }
+
+            // 處理特殊歷程
+            const reevals = [];
+            document.querySelectorAll('#reevalList .row-item').forEach(row => {
+                const d = parseRocString(row.querySelector('.reeval-date').value);
+                if (d) reevals.push({ 
+                    date: d, 
+                    jump: parseInt(row.querySelector('.reeval-jump').value)||0,
+                    newDeg: row.querySelector('.reeval-new-degree').value 
+                });
+            });
+
+            const leaves = [];
+            document.querySelectorAll('#leaveList .row-item').forEach(row => {
+                const s = parseRocString(row.querySelector('.leave-start').value);
+                const e = parseRocString(row.querySelector('.leave-end').value);
+                if (s && e) leaves.push({ start: s, end: e });
+            });
+
+            // 模擬生涯
+            const startAY = getAcademicYear(startDate);
+            const endAY = getAcademicYear(retireDate);
+            let currentLevel = degreeConfig[deg].start;
+            let maxPoint = degreeConfig[deg].max;
+
+            let totalSelf = 0;
+            let totalGov = 0;
+            let currentFundBalance = 0; // 當前基金累計總值 (含利息)
+            let html = '';
+
+            for (let ay = startAY; ay <= endAY; ay++) {
+                const ayStart = new Date(ay + 1911, 7, 1);
+                const ayEnd = new Date(ay + 1911 + 1, 6, 31);
+                
+                let effStart = ayStart < startDate ? startDate : ayStart;
+                let effEnd = ayEnd > retireDate ? retireDate : ayEnd;
+                if (effStart > effEnd) continue;
+
+                // 改敘
+                let jumpTotal = 0;
+                let newMax = 0;
+                reevals.forEach(r => {
+                    if (r.date >= effStart && r.date <= effEnd) {
+                        jumpTotal += r.jump;
+                        if (r.newDeg !== 'none') newMax = degreeConfig[r.newDeg].max;
+                    }
+                });
+                if (newMax) maxPoint = newMax;
+                if (jumpTotal) currentLevel = Math.max(1, currentLevel - jumpTotal);
+
+                // 計算有效天數 (扣除留停)
+                const daysInPeriod = Math.ceil((effEnd - effStart) / (86400000)) + 1;
+                let leaveDays = 0;
+                leaves.forEach(l => {
+                    leaveDays += getOverlapDays(effStart, effEnd, l.start, l.end);
+                });
+                const workDays = Math.max(0, daysInPeriod - leaveDays);
+
+                // --- 基金提撥計算 ---
+                const salary = salaryData[currentLevel].money;
+                const base = salary * 2;
+                const monthlyTotalFund = base * 0.15;
+                
+                // 實際提撥月數
+                const monthsInYear = workDays / 365 * 12;
+
+                // 本金計算
+                const yearSelf = Math.round(monthlyTotalFund * 0.35 * monthsInYear);
+                const yearGov = Math.round(monthlyTotalFund * 0.65 * monthsInYear);
+                const yearContribution = yearSelf + yearGov;
+
+                // 累計本金
+                totalSelf += yearSelf;
+                totalGov += yearGov;
+
+                // --- 複利投資計算 ---
+                // 1. 舊有資金的獲利 (整年)
+                const gainFromBalance = currentFundBalance * roiRate;
+                // 2. 新投入資金的獲利 (假設年中投入，算半年)
+                const gainFromNew = yearContribution * (roiRate / 2);
+                
+                const yearGain = Math.round(gainFromBalance + gainFromNew);
+                
+                // 期末結算
+                currentFundBalance = currentFundBalance + yearContribution + yearGain;
+
+                // 渲染表格 row
+                const isLeave = (workDays <= 0);
+                html += `
+                    <tr class="border-b ${isLeave ? 'is-leave' : 'hover:bg-gray-50'}">
+                        <td class="p-2 text-center whitespace-nowrap">${ay} 學年</td>
+                        <td class="p-2 text-center whitespace-nowrap">${currentLevel} 級</td>
+                        <td class="p-2 text-right whitespace-nowrap font-mono text-gray-500">${formatMoney(salary)}</td>
+                        <td class="p-2 text-right whitespace-nowrap font-mono text-orange-600">${formatMoney(yearSelf)}</td>
+                        <td class="p-2 text-right whitespace-nowrap font-mono text-blue-600">${formatMoney(yearGov)}</td>
+                        <td class="p-2 text-right whitespace-nowrap font-mono font-medium text-green-600">+${formatMoney(yearGain)}</td>
+                        <td class="p-2 text-right whitespace-nowrap font-mono font-bold text-teal-800">${formatMoney(currentFundBalance)}</td>
+                    </tr>
+                `;
+
+                // 晉級判斷
+                if (ay < endAY && leaveDays === 0) {
+                    const nextLvl = currentLevel - 1;
+                    if (nextLvl >= 1 && salaryData[nextLvl].point <= maxPoint) {
+                        currentLevel--;
+                    }
+                }
+            }
+
+            // 更新介面
+            const totalPrincipal = totalSelf + totalGov;
+            const totalGain = currentFundBalance - totalPrincipal;
+
+            document.getElementById('totalSelf').textContent = formatMoney(totalSelf);
+            document.getElementById('totalGov').textContent = formatMoney(totalGov);
+            document.getElementById('grandTotalWithROI').textContent = formatMoney(currentFundBalance);
+            document.getElementById('totalGain').textContent = `+${formatMoney(totalGain)}`;
+            
+            document.getElementById('resultBody').innerHTML = html;
+
+            // Chart.js (更新為投資結構圖)
+            const ctx = document.getElementById('fundChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['個人本金 (35%)', '政府本金 (65%)', '投資獲利'],
+                    datasets: [{
+                        data: [totalSelf, totalGov, totalGain],
+                        backgroundColor: ['#f97316', '#3b82f6', '#10b981'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    let value = context.raw;
+                                    let total = context.chart._metasets[context.datasetIndex].total;
+                                    let percentage = Math.round((value / total) * 100) + '%';
+                                    return label + new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(value) + ' (' + percentage + ')';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
