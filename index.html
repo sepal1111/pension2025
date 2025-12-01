@@ -42,7 +42,7 @@
             <h1 class="text-3xl font-bold text-gray-900 mb-2">
                 <i class="fas fa-calculator text-blue-600 mr-2"></i>教師退休生涯精算系統 (118年1月1日後退休者適用)
             </h1>
-            <p class="text-gray-500 mb-2">支援學年度制、改敘、留停、考績、公保及展期/減額月退試算</p>
+            <p class="text-gray-500 mb-2">支援學年度制、改敘、留停、公保及指標85判斷</p>
             <p class="text-gray-500 mb-2">薪級資料不會自動更新，資料以114.1.1調薪後為準</p>
             
             <div class="flex justify-center gap-6 mt-3">
@@ -102,29 +102,11 @@
                             </div>
                         </div>
 
-                        <!-- 隱藏的提早退休選項區塊，計算後若年齡<58才顯示 -->
-                        <div id="earlyRetireSection" class="hidden border-t pt-4 mt-2 fade-in">
-                            <label class="block text-sm font-bold text-red-600 mb-2">
-                                <i class="fas fa-exclamation-triangle mr-1"></i>未滿 58 歲退休選項
-                            </label>
-                            <div class="flex flex-col gap-2">
-                                <label class="inline-flex items-center p-2 border rounded cursor-pointer bg-white hover:bg-gray-50">
-                                    <input type="radio" name="earlyOption" value="deferred" class="form-radio text-blue-600" checked onchange="calculate()">
-                                    <div class="ml-2">
-                                        <span class="block text-sm font-bold text-gray-800">展期月退休金</span>
-                                        <span class="block text-xs text-gray-500">延後至58歲起領取全額</span>
-                                    </div>
-                                </label>
-                                <label class="inline-flex items-center p-2 border rounded cursor-pointer bg-white hover:bg-gray-50">
-                                    <input type="radio" name="earlyOption" value="reduced" class="form-radio text-blue-600" onchange="calculate()">
-                                    <div class="ml-2">
-                                        <span class="block text-sm font-bold text-gray-800">減額月退休金</span>
-                                        <span class="block text-xs text-gray-500">即刻領取，每早1年減4%</span>
-                                    </div>
-                                </label>
-                            </div>
-                            <div id="earlyRetireMsg" class="text-xs text-red-500 mt-2 font-medium"></div>
+                        <!-- 指標85 / 提早退休 選項區塊 -->
+                        <div id="pensionStatusSection" class="hidden border-t pt-4 mt-2 fade-in">
+                            <!-- JS 動態插入內容 -->
                         </div>
+
                     </div>
                 </div>
 
@@ -190,7 +172,7 @@
                             <div class="text-lg font-bold text-gray-800" id="resAge">--</div>
                         </div>
                         <div class="p-3 bg-gray-50 rounded">
-                            <div class="text-xs text-gray-500">採計年資</div>
+                            <div class="text-xs text-gray-500">採計年資 (指標)</div>
                             <div class="text-xl font-bold text-gray-800" id="resSeniority">--</div>
                         </div>
                         <div class="p-3 bg-gray-50 rounded">
@@ -292,9 +274,19 @@
                             <li><strong>所得替代率：</strong> 任職滿 15 年為 30%，第 16-35 年每年 +1.5%，第 36-40 年每年 +0.5% (最高 62.5%)。</li>
                         </ul>
                     </div>
+
+                    <!-- 指標85 -->
+                    <h5 class="text-sm font-bold text-green-700 mt-3 mb-1"><i class="fas fa-check-circle mr-1"></i>全額月退條件 (指標85 條款)：</h5>
+                    <div class="bg-green-50 p-3 rounded text-sm text-gray-700 space-y-1 border border-green-200">
+                         <p>在 <strong>2033年 (民國122年)</strong> 之前退休者，若滿足以下條件，即使未滿 58 歲，仍可支領全額月退休金：</p>
+                         <ul class="list-disc list-inside text-xs mt-1">
+                             <li>年資 + 年齡 ≧ <strong>85</strong> (指標數)</li>
+                             <li>且 年齡 ≧ <strong>55</strong> 歲</li>
+                         </ul>
+                    </div>
                     
                     <!-- 提早退休說明 -->
-                    <h5 class="text-sm font-bold text-gray-700 mt-3 mb-1">若未滿 58 歲 (但在 53 歲以上) 之選項：</h5>
+                    <h5 class="text-sm font-bold text-red-600 mt-3 mb-1"><i class="fas fa-exclamation-triangle mr-1"></i>未符上述條件，且未滿 58 歲之選項：</h5>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                         <div class="bg-white border p-2 rounded">
                             <span class="block font-bold text-blue-600">1. 展期月退休金</span>
@@ -491,40 +483,14 @@
                 return;
             }
 
-            // --- 提早退休介面控制 ---
-            // 計算精確退休年齡 (以日為單位)
-            const diffTime = retireDate - birthDate;
-            const ageInYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
-            const earlyRetireSection = document.getElementById('earlyRetireSection');
-            const earlyRetireMsg = document.getElementById('earlyRetireMsg');
-            let isEarly = false;
-            let earlyYears = 0;
-            let reductionRate = 0;
-
-            if (ageInYears < 58) {
-                isEarly = true;
-                earlyRetireSection.classList.remove('hidden');
-                
-                earlyYears = 58 - ageInYears;
-                
-                // 檢查是否超過5年 (53歲以下)
-                const reducedOption = document.querySelector('input[name="earlyOption"][value="reduced"]');
-                const deferredOption = document.querySelector('input[name="earlyOption"][value="deferred"]');
-                
-                if (ageInYears < 53) {
-                    reducedOption.disabled = true;
-                    deferredOption.checked = true;
-                    earlyRetireMsg.textContent = "※ 年齡未滿 53 歲，僅能選擇展期月退休金。";
-                } else {
-                    reducedOption.disabled = false;
-                    earlyRetireMsg.textContent = `※ 目前約 ${ageInYears.toFixed(1)} 歲，提前約 ${earlyYears.toFixed(1)} 年。`;
-                }
-
-            } else {
-                earlyRetireSection.classList.add('hidden');
+            // 0. 保存使用者目前的減額/展期選擇狀態 (以免重新渲染時重置)
+            let currentEarlyOption = 'deferred';
+            const reducedRadio = document.querySelector('input[name="earlyOption"][value="reduced"]');
+            if (reducedRadio && reducedRadio.checked) {
+                currentEarlyOption = 'reduced';
             }
 
-            // --- 資料處理 ---
+            // --- 迴圈模擬生涯 (先跑生涯計算總年資) ---
             const reevals = [];
             let reevalError = false;
             document.querySelectorAll('#reevalList .row-item').forEach(row => {
@@ -532,7 +498,6 @@
                 const date = parseRocString(dateStr);
                 const jump = parseInt(row.querySelector('.reeval-jump').value) || 0;
                 const newDeg = row.querySelector('.reeval-new-degree').value;
-                
                 if (dateStr && !date) reevalError = true; 
                 if (date) reevals.push({ date, jump, newDeg });
             });
@@ -545,7 +510,6 @@
                 const eStr = row.querySelector('.leave-end').value;
                 const s = parseRocString(sStr);
                 const e = parseRocString(eStr);
-                
                 if ((sStr && !s) || (eStr && !e)) leaveError = true;
                 if (s && e) leaves.push({ start: s, end: e });
             });
@@ -557,7 +521,6 @@
                 if (y) badRatings.push(y);
             });
 
-            // --- 迴圈模擬生涯 ---
             const startAY = getAcademicYear(startDate);
             const endAY = getAcademicYear(retireDate);
 
@@ -570,14 +533,12 @@
             for (let ay = startAY; ay <= endAY; ay++) {
                 const ayStart = new Date(ay + 1911, 7, 1);   
                 const ayEnd = new Date(ay + 1911 + 1, 6, 31); 
-
                 let effStart = ayStart < startDate ? startDate : ayStart;
                 let effEnd = ayEnd > retireDate ? retireDate : ayEnd;
 
                 if (effStart > effEnd) continue;
 
                 const age = ay + 1911 - (birthDate.getFullYear());
-
                 let reevalMsg = "";
                 let jumpTotal = 0;
                 let newMaxPoint = 0;
@@ -602,14 +563,8 @@
 
                 let daysInYear = Math.ceil((effEnd - effStart) / (1000 * 60 * 60 * 24)) + 1;
                 let leaveDays = 0;
-                let isLeaving = false;
-
                 leaves.forEach(l => {
-                    const overlap = getOverlapDays(effStart, effEnd, l.start, l.end);
-                    if (overlap > 0) {
-                        leaveDays += overlap;
-                        isLeaving = true;
-                    }
+                    leaveDays += getOverlapDays(effStart, effEnd, l.start, l.end);
                 });
 
                 let actualWorkDays = daysInYear - leaveDays;
@@ -656,11 +611,85 @@
                 }
             }
 
-            // --- 退休金計算 ---
+            // --- 處理指標85與退休資格判斷 ---
+            // 計算精確退休年齡
+            const diffTime = retireDate - birthDate;
+            const ageInYears = diffTime / (1000 * 60 * 60 * 24 * 365.25);
+            // 採計年資 (年)
             const validSeniorityYears = totalServiceDays / 365.0; 
             const senY = Math.floor(validSeniorityYears);
             const senM = Math.floor((totalServiceDays % 365) / 30);
             
+            // 指標數 = 年齡 (取整) + 年資 (取整)
+            const indexValue = Math.floor(ageInYears) + senY;
+            const retireYear = retireDate.getFullYear();
+            
+            const pensionStatusSection = document.getElementById('pensionStatusSection');
+            let isEarly = false;
+            let earlyYears = 0;
+            let isIndex85Qualified = false;
+
+            // 判斷邏輯
+            if (ageInYears < 58) {
+                // 檢查是否符合指標85例外條款 (2033年前)
+                if (retireYear < 2033 && indexValue >= 85 && ageInYears >= 55) {
+                    isIndex85Qualified = true;
+                    // 顯示符合資格訊息
+                    pensionStatusSection.classList.remove('hidden');
+                    pensionStatusSection.innerHTML = `
+                        <div class="bg-green-50 p-3 rounded border border-green-200">
+                            <label class="block text-sm font-bold text-green-700 mb-1">
+                                <i class="fas fa-check-circle mr-1"></i>符合全額月退資格 (指標85)
+                            </label>
+                            <p class="text-xs text-green-800">
+                                您退休時年資+年齡合計為 <strong>${indexValue}</strong> (≧85)，且年齡滿 55 歲。<br>
+                                依據過渡條款，雖然未滿 58 歲，仍可支領全額月退休金，無需展期或減額。
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    isEarly = true;
+                    earlyYears = 58 - ageInYears;
+                    pensionStatusSection.classList.remove('hidden');
+                    
+                    // 檢查是否超過5年 (53歲以下)
+                    const isTooYoung = ageInYears < 53;
+                    
+                    // 若太年輕則強制展期，否則維持用戶選擇
+                    if (isTooYoung) currentEarlyOption = 'deferred';
+
+                    pensionStatusSection.innerHTML = `
+                        <label class="block text-sm font-bold text-red-600 mb-2">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>未滿 58 歲退休選項
+                        </label>
+                        <div class="flex flex-col gap-2">
+                            <label class="inline-flex items-center p-2 border rounded cursor-pointer bg-white hover:bg-gray-50">
+                                <input type="radio" name="earlyOption" value="deferred" class="form-radio text-blue-600" onchange="calculate()" ${currentEarlyOption === 'deferred' ? 'checked' : ''}>
+                                <div class="ml-2">
+                                    <span class="block text-sm font-bold text-gray-800">展期月退休金</span>
+                                    <span class="block text-xs text-gray-500">延後至58歲起領取全額</span>
+                                </div>
+                            </label>
+                            <label class="inline-flex items-center p-2 border rounded cursor-pointer bg-white hover:bg-gray-50 ${isTooYoung ? 'opacity-50' : ''}">
+                                <input type="radio" name="earlyOption" value="reduced" class="form-radio text-blue-600" onchange="calculate()" ${isTooYoung ? 'disabled' : ''} ${currentEarlyOption === 'reduced' ? 'checked' : ''}>
+                                <div class="ml-2">
+                                    <span class="block text-sm font-bold text-gray-800">減額月退休金</span>
+                                    <span class="block text-xs text-gray-500">即刻領取，每早1年減4%</span>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="text-xs text-red-500 mt-2 font-medium">
+                            ${isTooYoung ? '※ 年齡未滿 53 歲，僅能選擇展期月退休金。' : `※ 目前約 ${ageInYears.toFixed(1)} 歲，提前約 ${earlyYears.toFixed(1)} 年。`}
+                            <br> 指標數: ${indexValue} (未達85或不適用)
+                        </div>
+                    `;
+                }
+            } else {
+                pensionStatusSection.classList.add('hidden');
+                pensionStatusSection.innerHTML = '';
+            }
+
+            // --- 退休金金額計算 ---
             const replaceRate = getReplacementRate(validSeniorityYears);
 
             // 均俸
@@ -693,26 +722,21 @@
                 monthlyPension = Math.round(avgSalary * 2 * (replaceRate / 100));
             }
 
-            // --- 處理減額/展期 ---
+            // --- 處理減額/展期 金額 ---
             let finalPension = monthlyPension;
             let pensionNote = "";
             
-            if (isEarly && validSeniorityYears >= 15) {
-                const option = document.querySelector('input[name="earlyOption"]:checked').value;
-                if (option === 'reduced') {
-                    // 減額：每早1年扣4%
-                    // 用無條件進位的年數計算 (未滿1年以1年計) 還是精確計算? 
-                    // 法規：提前一年減發百分之四。通常未滿一年會依比例或進位，此處採用簡單邏輯：
-                    // 法規條文多為「每提前一年」，實務上未滿一年之畸零數按比例計算。
-                    // 這裡為了保守估計，採用實際年數 * 4%
-                    if (earlyYears > 5) earlyYears = 5; // 上限5年
+            if (isEarly && validSeniorityYears >= 15 && !isIndex85Qualified) {
+                if (currentEarlyOption === 'reduced') {
+                    if (earlyYears > 5) earlyYears = 5; 
                     const reducePercent = earlyYears * 0.04; 
                     finalPension = Math.round(monthlyPension * (1 - reducePercent));
                     pensionNote = `(已扣減 ${(reducePercent*100).toFixed(1)}% , 提前 ${earlyYears.toFixed(1)} 年)`;
                 } else {
-                    // 展期
                     pensionNote = "(須待年滿 58 歲起支領)";
                 }
+            } else if (isIndex85Qualified) {
+                pensionNote = "(符合指標85，全額月退)";
             }
 
             // 公保
@@ -740,12 +764,13 @@
 
             const elAge = document.getElementById('resAge');
             elAge.textContent = `${rAgeY}歲 ${rAgeM}月 ${rAgeD}日`;
-            elAge.className = (rAgeY < 58) ? "text-lg font-bold text-red-600" : "text-lg font-bold text-gray-800";
+            elAge.className = (rAgeY < 58 && !isIndex85Qualified) ? "text-lg font-bold text-red-600" : "text-lg font-bold text-green-700";
 
-            document.getElementById('resSeniority').textContent = `${senY}年 ${senM}月`;
+            document.getElementById('resSeniority').textContent = `${senY}年 ${senM}月 (${indexValue})`;
             document.getElementById('resRate').textContent = `${replaceRate.toFixed(1)}%`;
             document.getElementById('resPension').textContent = formatMoney(finalPension);
             document.getElementById('resPensionNote').textContent = pensionNote;
+            document.getElementById('resPensionNote').className = isIndex85Qualified ? "text-xs text-green-600 font-bold mt-1" : "text-xs text-red-500 font-bold mt-1";
             document.getElementById('resAvgSalary').textContent = formatMoney(avgSalary);
             
             document.getElementById('resInsYears').textContent = `${insYears}年 ${insMonths}月`;
