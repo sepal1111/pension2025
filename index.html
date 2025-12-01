@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教師退休薪資精算系統 (進階版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f3f4f6; }
+        .input-group label { display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
+        .input-roc { display: flex; align-items: center; gap: 0.5rem; }
+        .input-roc input { width: 100%; border: 1px solid #d1d5db; padding: 0.5rem; border-radius: 0.375rem; }
+        .input-roc span { color: #6b7280; font-size: 0.875rem; white-space: nowrap; }
+        .section-card { background: white; border-radius: 0.75rem; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+        .btn-add { background-color: #eff6ff; color: #2563eb; border: 1px dashed #bfdbfe; transition: all 0.2s; }
+        .btn-add:hover { background-color: #dbeafe; border-color: #3b82f6; }
+        .tag-badge { font-size: 0.75rem; padding: 0.1rem 0.4rem; border-radius: 9999px; white-space: nowrap; }
+        
+        /* Table styles */
+        .table-container { overflow-x: auto; max-height: 600px; }
+        thead th { position: sticky; top: 0; background-color: #f9fafb; z-index: 10; }
+        tr.is-leave { background-color: #fef2f2; color: #991b1b; }
+        tr.is-promo-fail { background-color: #fffbeb; color: #92400e; }
+        tr.is-retired { background-color: #f0fdf4; color: #166534; font-weight: bold; border-left: 4px solid #22c55e; }
+    </style>
+</head>
+<body class="p-4 md:p-8 text-gray-800">
+
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">
+                <i class="fas fa-calculator text-blue-600 mr-2"></i>教師退休生涯精算系統 (進階版)
+            </h1>
+            <p class="text-gray-500">支援學年度制、改敘、留停、考績及公保一次給付試算</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            
+            <!-- 左側設置區 (佔 4/12) -->
+            <div class="xl:col-span-4 space-y-6">
+                
+                <!-- 1. 基本資料 -->
+                <div class="section-card border-l-4 border-blue-500">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user-circle mr-2 text-blue-500"></i>基本資料設定
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="input-group">
+                            <label>初任學歷 (起敘點)</label>
+                            <select id="degree" class="w-full border p-2 rounded bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                                <option value="bachelor" selected>大學 (起敘26級 / 頂625)</option>
+                                <option value="master">碩士 (起敘21級 / 頂650)</option>
+                                <option value="phd">博士 (起敘16級 / 頂680)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>出生日期 (民國)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="birthY" placeholder="年" class="border p-2 rounded w-20" value="70">
+                                <input type="number" id="birthM" placeholder="月" class="border p-2 rounded w-16" value="1">
+                                <input type="number" id="birthD" placeholder="日" class="border p-2 rounded w-16" value="1">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>初任教職日期 (民國)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="startY" placeholder="年" class="border p-2 rounded w-20" value="95">
+                                <input type="number" id="startM" placeholder="月" class="border p-2 rounded w-16" value="8">
+                                <input type="number" id="startD" placeholder="日" class="border p-2 rounded w-16" value="1">
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>預計退休日期 (民國)</label>
+                            <div class="flex gap-2">
+                                <input type="number" id="retireY" placeholder="年" class="border p-2 rounded w-20" value="125">
+                                <input type="number" id="retireM" placeholder="月" class="border p-2 rounded w-16" value="8">
+                                <input type="number" id="retireD" placeholder="日" class="border p-2 rounded w-16" value="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 特殊狀況設定 (改敘、留停、考績) -->
+                <div class="section-card border-l-4 border-purple-500">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-calendar-check mr-2 text-purple-500"></i>特殊歷程設定
+                    </h2>
+
+                    <!-- 改敘 -->
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-gray-700">學歷改敘 / 提敘</label>
+                            <button onclick="addEventRow('reeval')" class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200"><i class="fas fa-plus"></i> 新增</button>
+                        </div>
+                        <div id="reevalList" class="space-y-2 text-sm">
+                            <!-- JS 動態插入 -->
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">取得較高學歷時，可設定該日期提敘級數與變更最高俸級。</p>
+                    </div>
+
+                    <!-- 留職停薪 -->
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-gray-700">留職停薪 (扣除年資)</label>
+                            <button onclick="addEventRow('leave')" class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded hover:bg-red-200"><i class="fas fa-plus"></i> 新增</button>
+                        </div>
+                        <div id="leaveList" class="space-y-2 text-sm">
+                            <!-- JS 動態插入 -->
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">留停期間不計入退休年資，且該學年無法晉級</p>
+                    </div>
+
+                    <!-- 考績乙丙 -->
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="text-sm font-bold text-gray-700">考績丙等 (不晉級)</label>
+                            <button onclick="addEventRow('badRating')" class="text-xs bg-yellow-100 text-yellow-600 px-2 py-1 rounded hover:bg-yellow-200"><i class="fas fa-plus"></i> 新增</button>
+                        </div>
+                        <div id="badRatingList" class="space-y-2 text-sm">
+                            <!-- JS 動態插入 -->
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">輸入學年度 (如 112)，該年度結束不晉級</p>
+                    </div>
+                </div>
+
+                <!-- 按鈕 -->
+                <button onclick="calculate()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow hover:bg-blue-700 transition">
+                    <i class="fas fa-calculator mr-2"></i> 開始精算
+                </button>
+            </div>
+
+            <!-- 右側結果區 (佔 8/12) -->
+            <div class="xl:col-span-8 space-y-6">
+                
+                <!-- 結果摘要 -->
+                <div class="bg-white rounded-xl shadow p-6 border-t-4 border-green-500">
+                    <h3 class="font-bold text-gray-800 border-b pb-2 mb-4">月退休金試算</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="text-xs text-gray-500">退休年齡</div>
+                            <div class="text-xl font-bold text-gray-800" id="resAge">--</div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="text-xs text-gray-500">採計年資</div>
+                            <div class="text-xl font-bold text-gray-800" id="resSeniority">--</div>
+                        </div>
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="text-xs text-gray-500">所得替代率</div>
+                            <div class="text-xl font-bold text-blue-600" id="resRate">--</div>
+                        </div>
+                        <div class="p-3 bg-yellow-50 rounded border border-yellow-100">
+                            <div class="text-xs text-yellow-700 font-bold">預估月退金</div>
+                            <div class="text-xl font-bold text-yellow-600" id="resPension">--</div>
+                        </div>
+                    </div>
+                    
+                    <h3 class="font-bold text-gray-800 border-b pb-2 mb-4 mt-6">公保養老給付 (一次領)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                        <div class="p-3 bg-indigo-50 rounded">
+                            <div class="text-xs text-indigo-700">公保年資 (滿42個基數上限)</div>
+                            <div class="text-lg font-bold text-indigo-800" id="resInsYears">--</div>
+                        </div>
+                        <div class="p-3 bg-indigo-50 rounded">
+                            <div class="text-xs text-indigo-700">給付基數 (1.2/年)</div>
+                            <div class="text-lg font-bold text-indigo-800" id="resInsUnits">--</div>
+                        </div>
+                        <div class="p-3 bg-indigo-100 rounded border border-indigo-200">
+                            <div class="text-xs text-indigo-800 font-bold">公保給付金額 (最後本俸×基數)</div>
+                            <div class="text-xl font-bold text-indigo-700" id="resInsAmount">--</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-between items-end border-t pt-4">
+                        <div>
+                            <span class="text-sm text-gray-600">最後 15 年平均本俸：</span>
+                            <span class="font-bold text-lg text-gray-800" id="resAvgSalary">--</span>
+                        </div>
+                        <div class="text-xs text-gray-400 text-right">
+                            *此試算僅供參考，實際金額以銓敘部及台銀公保部審定為準
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 詳細表格 -->
+                <div class="bg-white rounded-xl shadow overflow-hidden flex flex-col h-[600px]">
+                    <div class="p-3 bg-gray-100 border-b flex justify-between items-center text-sm">
+                        <span class="font-bold text-gray-700">生涯歷程明細表 (學年度制)</span>
+                        <div class="flex gap-2 text-xs">
+                            <span class="flex items-center"><span class="w-2 h-2 bg-red-100 border border-red-300 mr-1"></span>留職停薪</span>
+                            <span class="flex items-center"><span class="w-2 h-2 bg-yellow-100 border border-yellow-300 mr-1"></span>未晉級</span>
+                            <span class="flex items-center"><span class="w-2 h-2 bg-blue-100 border border-blue-300 mr-1"></span>均俸計算區間</span>
+                        </div>
+                    </div>
+                    <div class="table-container flex-grow">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead>
+                                <tr class="text-gray-600 border-b">
+                                    <th class="p-3 text-center bg-gray-50">學年度</th>
+                                    <th class="p-3 text-center bg-gray-50">期間</th>
+                                    <th class="p-3 text-center bg-gray-50">年齡</th>
+                                    <th class="p-3 text-center bg-gray-50">薪級</th>
+                                    <th class="p-3 text-center bg-gray-50">薪點</th>
+                                    <th class="p-3 text-right bg-gray-50">本俸</th>
+                                    <th class="p-3 bg-gray-50 w-1/4">狀態/備註</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultBody" class="divide-y divide-gray-100">
+                                <!-- JS Render -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 隱藏的模板 -->
+    <template id="tmpl-reeval">
+        <div class="flex flex-col gap-1 bg-blue-50 p-2 rounded border border-blue-200 animate-fade-in row-item mb-1">
+            <div class="flex gap-2 items-center">
+                <span class="text-xs text-gray-500">日期</span>
+                <input type="text" placeholder="民國YYY/MM/DD" class="w-28 text-xs p-1 border rounded reeval-date">
+                <span class="text-xs text-gray-500">提</span>
+                <input type="number" placeholder="級數" value="0" class="w-12 text-xs p-1 border rounded reeval-jump">
+                <span class="text-xs text-gray-500">級</span>
+            </div>
+            <div class="flex gap-2 items-center">
+                <span class="text-xs text-gray-500">變更最高俸級</span>
+                <select class="text-xs p-1 border rounded w-32 reeval-new-degree">
+                    <option value="none">不變更 (維持原頂)</option>
+                    <option value="master">變更為碩士頂 (650)</option>
+                    <option value="phd">變更為博士頂 (680)</option>
+                </select>
+                <button class="ml-auto text-red-400 hover:text-red-600" onclick="removeRow(this)"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+    </template>
+
+    <template id="tmpl-leave">
+        <div class="flex flex-col gap-1 bg-red-50 p-2 rounded border border-red-100 animate-fade-in row-item mb-1">
+            <div class="flex gap-2 items-center">
+                <span class="text-xs text-red-700">起</span>
+                <input type="text" placeholder="民國YYY/MM/DD" class="w-28 text-xs p-1 border rounded leave-start">
+            </div>
+            <div class="flex gap-2 items-center">
+                <span class="text-xs text-red-700">迄</span>
+                <input type="text" placeholder="民國YYY/MM/DD" class="w-28 text-xs p-1 border rounded leave-end">
+                <button class="ml-auto text-red-400 hover:text-red-600" onclick="removeRow(this)"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </div>
+    </template>
+
+    <template id="tmpl-badRating">
+        <div class="flex gap-2 items-center bg-yellow-50 p-2 rounded border border-yellow-100 animate-fade-in row-item mb-1">
+            <span class="text-xs">學年度</span>
+            <input type="number" placeholder="如 112" class="w-20 text-xs p-1 border rounded rating-year">
+            <span class="text-xs text-gray-500">考績丙(無)</span>
+            <button class="ml-auto text-red-400 hover:text-red-600" onclick="removeRow(this)"><i class="fas fa-trash-alt"></i></button>
+        </div>
+    </template>
+
+    <script>
+        // --- 1. 資料庫與設定 ---
+        const salaryData = {
+            1: { point: 680, money: 57220 }, 2: { point: 650, money: 55690 }, 3: { point: 625, money: 54160 },
+            4: { point: 600, money: 52630 }, 5: { point: 575, money: 51100 }, 6: { point: 550, money: 49560 },
+            7: { point: 525, money: 48030 }, 8: { point: 500, money: 46500 }, 9: { point: 475, money: 44970 },
+            10: { point: 450, money: 41900 }, 11: { point: 430, money: 40760 }, 12: { point: 410, money: 39610 },
+            13: { point: 390, money: 38460 }, 14: { point: 370, money: 37310 }, 15: { point: 350, money: 36160 },
+            16: { point: 330, money: 35010 }, 17: { point: 310, money: 33860 }, 18: { point: 290, money: 32710 },
+            19: { point: 275, money: 31560 }, 20: { point: 260, money: 30410 }, 21: { point: 245, money: 29270 },
+            22: { point: 230, money: 28120 }, 23: { point: 220, money: 27350 }, 24: { point: 210, money: 26580 },
+            25: { point: 200, money: 25820 }, 26: { point: 190, money: 25050 }
+        };
+
+        const degreeConfig = {
+            'bachelor': { start: 26, max: 625 },
+            'master':   { start: 21, max: 650 },
+            'phd':      { start: 16, max: 680 }
+        };
+
+        // --- 2. 輔助函數 ---
+
+        // 民國字串 (YYY/MM/DD) 轉 Date 物件
+        function parseRocDate(year, month, day) {
+            if(!year || !month || !day) return null;
+            return new Date(parseInt(year) + 1911, parseInt(month) - 1, parseInt(day));
+        }
+
+        // 字串解析器 (112/08/01 -> Date)
+        function parseRocString(str) {
+            // 清理輸入，轉半形，移除空白
+            str = str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+                return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+            }).trim();
+            
+            const parts = str.split(/[\/\-\.]/);
+            if (parts.length < 3) return null;
+            const y = parseInt(parts[0]);
+            const m = parseInt(parts[1]);
+            const d = parseInt(parts[2]);
+            if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+            return new Date(y + 1911, m - 1, d);
+        }
+
+        // Date 物件轉 民國字串
+        function toRocString(date) {
+            if (!date) return "";
+            return `${date.getFullYear() - 1911}/${date.getMonth() + 1}/${date.getDate()}`;
+        }
+
+        function formatMoney(num) {
+            return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', minimumFractionDigits: 0 }).format(num);
+        }
+
+        // 判斷某個時間點屬於哪個學年度 (8/1 ~ 7/31)
+        // 例: 2023/08/01 -> 112學年, 2024/07/31 -> 112學年
+        function getAcademicYear(date) {
+            const y = date.getFullYear() - 1911;
+            const m = date.getMonth() + 1;
+            return m >= 8 ? y : y - 1;
+        }
+
+        // 計算兩個日期重疊的天數
+        function getOverlapDays(start1, end1, start2, end2) {
+            const s = start1 > start2 ? start1 : start2;
+            const e = end1 < end2 ? end1 : end2;
+            if (s > e) return 0;
+            return Math.ceil((e - s) / (1000 * 60 * 60 * 24)) + 1;
+        }
+
+        // 所得替代率表 (年資 -> %)
+        function getReplacementRate(years) {
+            years = Math.floor(years); // 無條件捨去小數年
+            if (years < 15) return 0;
+            if (years >= 40) return 62.5;
+            if (years <= 35) return 30 + (years - 15) * 1.5;
+            return 60 + (years - 35) * 0.5;
+        }
+
+        // --- 3. UI 操作 ---
+        
+        function addEventRow(type) {
+            const tmpl = document.getElementById(`tmpl-${type}`);
+            const clone = tmpl.content.cloneNode(true);
+            document.getElementById(`${type}List`).appendChild(clone);
+        }
+
+        function removeRow(btn) {
+            btn.closest('.row-item').remove();
+        }
+
+        // --- 4. 核心計算邏輯 ---
+
+        function calculate() {
+            // A. 讀取基礎輸入
+            const deg = document.getElementById('degree').value;
+            const birthDate = parseRocDate(document.getElementById('birthY').value, document.getElementById('birthM').value, document.getElementById('birthD').value);
+            const startDate = parseRocDate(document.getElementById('startY').value, document.getElementById('startM').value, document.getElementById('startD').value);
+            const retireDate = parseRocDate(document.getElementById('retireY').value, document.getElementById('retireM').value, document.getElementById('retireD').value);
+
+            if (!birthDate || !startDate || !retireDate) {
+                alert("請填寫完整的日期");
+                return;
+            }
+            if (retireDate <= startDate) {
+                alert("退休日期必須晚於初任日期");
+                return;
+            }
+
+            // B. 讀取列表輸入 (改敘、留停、考績)
+            // B1. 改敘
+            const reevals = [];
+            let reevalError = false;
+            document.querySelectorAll('#reevalList .row-item').forEach(row => {
+                const dateStr = row.querySelector('.reeval-date').value;
+                const date = parseRocString(dateStr);
+                const jump = parseInt(row.querySelector('.reeval-jump').value) || 0;
+                const newDeg = row.querySelector('.reeval-new-degree').value;
+                
+                if (dateStr && !date) reevalError = true; // 有輸入但格式錯
+                if (date) reevals.push({ date, jump, newDeg });
+            });
+            if (reevalError) alert("部分改敘日期格式錯誤，請使用 112/08/01 格式");
+
+            // B2. 留停
+            const leaves = [];
+            let leaveError = false;
+            document.querySelectorAll('#leaveList .row-item').forEach(row => {
+                const sStr = row.querySelector('.leave-start').value;
+                const eStr = row.querySelector('.leave-end').value;
+                const s = parseRocString(sStr);
+                const e = parseRocString(eStr);
+                
+                if ((sStr && !s) || (eStr && !e)) leaveError = true;
+                if (s && e) leaves.push({ start: s, end: e });
+            });
+            if (leaveError) alert("部分留停日期格式錯誤，請使用 112/08/01 格式");
+
+            // B3. 考績
+            const badRatings = []; // 存學年度
+            document.querySelectorAll('#badRatingList .row-item').forEach(row => {
+                const y = parseInt(row.querySelector('.rating-year').value);
+                if (y) badRatings.push(y);
+            });
+
+            // C. 準備迴圈
+            const startAY = getAcademicYear(startDate);
+            const endAY = getAcademicYear(retireDate);
+
+            let currentLevel = degreeConfig[deg].start;
+            let maxPoint = degreeConfig[deg].max; // **改為 let，允許被改敘變更**
+            
+            let history = [];
+            let totalServiceDays = 0; // 總服務天數 (扣除留停)
+            
+            // 開始學年度迴圈
+            for (let ay = startAY; ay <= endAY; ay++) {
+                // 定義該學年度的起訖
+                const ayStart = new Date(ay + 1911, 7, 1);   // 8月1日
+                const ayEnd = new Date(ay + 1911 + 1, 6, 31); // 次年7月31日
+
+                // 有效任職區間
+                let effStart = ayStart < startDate ? startDate : ayStart;
+                let effEnd = ayEnd > retireDate ? retireDate : ayEnd;
+
+                if (effStart > effEnd) continue;
+
+                // 1. 計算年齡
+                const age = ay + 1911 - (birthDate.getFullYear());
+
+                // 2. 處理改敘 (若改敘日期在此學年度有效任職期間內)
+                let reevalMsg = "";
+                let jumpTotal = 0;
+                let newMaxPoint = 0;
+                
+                reevals.forEach(r => {
+                    if (r.date >= effStart && r.date <= effEnd) {
+                        jumpTotal += r.jump;
+                        
+                        // 更新天花板
+                        if (r.newDeg !== 'none') {
+                            newMaxPoint = degreeConfig[r.newDeg].max;
+                            // 顯示訊息
+                            const degText = r.newDeg === 'master' ? '碩' : '博';
+                            reevalMsg += `改${degText}頂 `;
+                        }
+                        if (r.jump > 0) reevalMsg += `提${r.jump}級 `;
+                    }
+                });
+                
+                // 套用改敘效果
+                if (newMaxPoint > 0) {
+                    maxPoint = newMaxPoint; // **更新全域 maxPoint**
+                }
+                if (jumpTotal > 0) {
+                    currentLevel -= jumpTotal;
+                    if (currentLevel < 1) currentLevel = 1;
+                }
+
+                // 3. 處理留職停薪
+                let daysInYear = Math.ceil((effEnd - effStart) / (1000 * 60 * 60 * 24)) + 1;
+                let leaveDays = 0;
+                let isLeaving = false;
+
+                leaves.forEach(l => {
+                    const overlap = getOverlapDays(effStart, effEnd, l.start, l.end);
+                    if (overlap > 0) {
+                        leaveDays += overlap;
+                        isLeaving = true;
+                    }
+                });
+
+                let actualWorkDays = daysInYear - leaveDays;
+                totalServiceDays += actualWorkDays;
+
+                // 4. 判斷明年是否晉級
+                let canPromote = true;
+                let statusTags = [];
+
+                if (leaveDays > 0) {
+                    canPromote = false;
+                    statusTags.push({ text: "留停", color: "red" });
+                }
+
+                if (badRatings.includes(ay)) {
+                    canPromote = false;
+                    statusTags.push({ text: "考丙", color: "yellow" });
+                }
+
+                // **使用當前的 maxPoint 檢查是否到頂**
+                if (salaryData[currentLevel].point >= maxPoint) {
+                    canPromote = false;
+                    statusTags.push({ text: "頂", color: "gray" });
+                }
+
+                if (reevalMsg) statusTags.push({ text: reevalMsg.trim(), color: "blue" });
+
+                // 記錄資料
+                const salary = salaryData[currentLevel];
+                history.push({
+                    ay: ay,
+                    dateRange: `${ayStart.getFullYear()-1911}/${ayStart.getMonth()+1} ~ ${ayEnd.getFullYear()-1911}/${ayEnd.getMonth()+1}`,
+                    age: age,
+                    level: currentLevel,
+                    point: salary.point,
+                    money: salary.money,
+                    status: statusTags,
+                    isLeave: (actualWorkDays <= 0), 
+                    actualWorkDays: actualWorkDays
+                });
+
+                // 5. 執行晉級 (影響下一年)
+                if (ay < endAY && canPromote && currentLevel > 1) {
+                    let nextLevel = currentLevel - 1;
+                    // **檢查是否超過當前(可能已變更的) maxPoint**
+                    if (salaryData[nextLevel].point <= maxPoint) {
+                        currentLevel--;
+                    }
+                }
+            }
+
+            // D. 計算退休金相關數據
+
+            // 1. 採計年資 (年)
+            const validSeniorityYears = totalServiceDays / 365.0; 
+            const senY = Math.floor(validSeniorityYears);
+            const senM = Math.floor((totalServiceDays % 365) / 30);
+            
+            // 2. 所得替代率
+            const replaceRate = getReplacementRate(validSeniorityYears);
+
+            // 3. 均俸計算
+            let daysCounted = 0;
+            let totalWeightedSalary = 0;
+            const targetDays = 15 * 365;
+            let avgRangeIndices = [];
+
+            for (let i = history.length - 1; i >= 0; i--) {
+                const h = history[i];
+                if (h.actualWorkDays <= 0) continue; 
+
+                let daysToTake = h.actualWorkDays;
+                if (daysCounted + daysToTake > targetDays) {
+                    daysToTake = targetDays - daysCounted;
+                }
+
+                totalWeightedSalary += h.money * daysToTake;
+                daysCounted += daysToTake;
+                avgRangeIndices.push(i);
+
+                if (daysCounted >= targetDays) break;
+            }
+
+            const avgSalary = daysCounted > 0 ? Math.round(totalWeightedSalary / daysCounted) : 0;
+            
+            // 4. 月退金
+            let monthlyPension = 0;
+            if (validSeniorityYears >= 15) {
+                monthlyPension = Math.round(avgSalary * 2 * (replaceRate / 100));
+            }
+
+            // 5. 公保養老給付 (一次領) 計算
+            // 公式：每年 1.2 個基數 (0.1/月)
+            // 年資未滿1個月的部分以1個月計算
+            
+            // 計算公保年資 (轉換為月數)
+            const insYears = Math.floor(totalServiceDays / 365);
+            const insRemainingDays = totalServiceDays % 365;
+            const insMonths = Math.ceil(insRemainingDays / 30); // 剩餘天數轉月 (未滿一個月算一個月)
+            
+            // 總月數 (年*12 + 月)
+            const totalInsMonths = insYears * 12 + insMonths;
+            
+            // 計算基數 (0.1 * 總月數)，上限42
+            let insUnits = totalInsMonths * 0.1;
+            if (insUnits > 42) insUnits = 42;
+            insUnits = Math.round(insUnits * 100) / 100; // 小數點兩位
+
+            // 計算給付金額 (最後一年本俸 * 基數)
+            const lastSalary = history.length > 0 ? history[history.length - 1].money : 0;
+            const insAmount = Math.round(lastSalary * insUnits);
+
+            // E. 渲染結果
+            if (history.length === 0) {
+                alert("無有效任職期間，請檢查日期");
+                return;
+            }
+
+            const lastRow = history[history.length - 1];
+            document.getElementById('resAge').textContent = `${lastRow.age} 歲`;
+            document.getElementById('resSeniority').textContent = `${senY}年 ${senM}月`;
+            document.getElementById('resRate').textContent = `${replaceRate.toFixed(1)}%`;
+            document.getElementById('resPension').textContent = formatMoney(monthlyPension);
+            document.getElementById('resAvgSalary').textContent = formatMoney(avgSalary);
+            
+            // 渲染公保
+            document.getElementById('resInsYears').textContent = `${insYears}年 ${insMonths}月`;
+            document.getElementById('resInsUnits').textContent = `${insUnits.toFixed(1)}`;
+            document.getElementById('resInsAmount').textContent = formatMoney(insAmount);
+
+            const tbody = document.getElementById('resultBody');
+            tbody.innerHTML = '';
+            
+            history.forEach((h, idx) => {
+                let rowClass = "border-b hover:bg-gray-50";
+                
+                const isRetired = (idx === history.length - 1);
+                const isInAvg = avgRangeIndices.includes(idx);
+                const isLeave = h.status.some(s => s.text === "留停");
+                const isFail = h.status.some(s => s.text === "考丙");
+
+                if (isRetired) rowClass += " is-retired";
+                else if (isLeave) rowClass += " is-leave";
+                else if (isFail) rowClass += " is-promo-fail";
+                else if (isInAvg) rowClass += " bg-blue-50";
+
+                let tagsHtml = h.status.map(t => 
+                    `<span class="tag-badge bg-${t.color}-100 text-${t.color}-700 border border-${t.color}-300">${t.text}</span>`
+                ).join(" ");
+
+                if (isInAvg && !isRetired && !isLeave) {
+                    tagsHtml += ` <span class="tag-badge bg-blue-50 text-blue-600 border border-blue-200"><i class="fas fa-coins"></i> 均俸</span>`;
+                }
+                if (isRetired) tagsHtml += ` <span class="tag-badge bg-green-100 text-green-700">退休</span>`;
+
+                tbody.innerHTML += `
+                    <tr class="${rowClass}">
+                        <td class="p-3 text-center">${h.ay} 學年</td>
+                        <td class="p-3 text-center text-xs text-gray-500">${h.dateRange}</td>
+                        <td class="p-3 text-center">${h.age}</td>
+                        <td class="p-3 text-center">${h.level}</td>
+                        <td class="p-3 text-center font-mono">${h.point}</td>
+                        <td class="p-3 text-right font-mono font-medium">${formatMoney(h.money)}</td>
+                        <td class="p-3 text-left flex gap-1 flex-wrap">${tagsHtml}</td>
+                    </tr>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
