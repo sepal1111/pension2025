@@ -155,7 +155,7 @@
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
                         <div class="p-3 bg-gray-50 rounded">
                             <div class="text-xs text-gray-500">退休年齡</div>
-                            <div class="text-xl font-bold text-gray-800" id="resAge">--</div>
+                            <div class="text-lg font-bold text-gray-800" id="resAge">--</div>
                         </div>
                         <div class="p-3 bg-gray-50 rounded">
                             <div class="text-xs text-gray-500">採計年資</div>
@@ -632,8 +632,26 @@
                 return;
             }
 
-            const lastRow = history[history.length - 1];
-            document.getElementById('resAge').textContent = `${lastRow.age} 歲`;
+            // 计算精确退休年龄 (岁/月/日)
+            let rAgeY = retireDate.getFullYear() - birthDate.getFullYear();
+            let rAgeM = retireDate.getMonth() - birthDate.getMonth();
+            let rAgeD = retireDate.getDate() - birthDate.getDate();
+
+            if (rAgeD < 0) {
+                rAgeM--;
+                // 借用上個月的天數
+                const prevMonth = new Date(retireDate.getFullYear(), retireDate.getMonth(), 0);
+                rAgeD += prevMonth.getDate();
+            }
+
+            if (rAgeM < 0) {
+                rAgeY--;
+                rAgeM += 12;
+            }
+
+            document.getElementById('resAge').textContent = `${rAgeY}歲 ${rAgeM}月 ${rAgeD}日`;
+            document.getElementById('resAge').className = "text-lg font-bold text-gray-800"; // 調整字體大小以適應
+
             document.getElementById('resSeniority').textContent = `${senY}年 ${senM}月`;
             document.getElementById('resRate').textContent = `${replaceRate.toFixed(1)}%`;
             document.getElementById('resPension').textContent = formatMoney(monthlyPension);
