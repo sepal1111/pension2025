@@ -79,8 +79,8 @@
                             <label>出生日期 (民國)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="birthY" placeholder="年" class="border p-2 rounded w-20" value="70">
-                                <input type="number" id="birthM" placeholder="月" class="border p-2 rounded w-16" value="1">
-                                <input type="number" id="birthD" placeholder="日" class="border p-2 rounded w-16" value="1">
+                                <input type="number" id="birthM" placeholder="月" class="border p-2 rounded w-16" value="1" min="1" max="12" oninput="if(this.value>12)this.value=12;if(this.value<1 && this.value!=='')this.value=1">
+                                <input type="number" id="birthD" placeholder="日" class="border p-2 rounded w-16" value="1" min="1" max="31" oninput="if(this.value>31)this.value=31;if(this.value<1 && this.value!=='')this.value=1">
                             </div>
                         </div>
 
@@ -88,8 +88,8 @@
                             <label>初任教職日期 (民國)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="startY" placeholder="年" class="border p-2 rounded w-20" value="95">
-                                <input type="number" id="startM" placeholder="月" class="border p-2 rounded w-16" value="8">
-                                <input type="number" id="startD" placeholder="日" class="border p-2 rounded w-16" value="1">
+                                <input type="number" id="startM" placeholder="月" class="border p-2 rounded w-16" value="8" min="1" max="12" oninput="if(this.value>12)this.value=12;if(this.value<1 && this.value!=='')this.value=1">
+                                <input type="number" id="startD" placeholder="日" class="border p-2 rounded w-16" value="1" min="1" max="31" oninput="if(this.value>31)this.value=31;if(this.value<1 && this.value!=='')this.value=1">
                             </div>
                         </div>
 
@@ -97,8 +97,8 @@
                             <label>預計退休日期 (民國)</label>
                             <div class="flex gap-2">
                                 <input type="number" id="retireY" placeholder="年" class="border p-2 rounded w-20" value="125">
-                                <input type="number" id="retireM" placeholder="月" class="border p-2 rounded w-16" value="8">
-                                <input type="number" id="retireD" placeholder="日" class="border p-2 rounded w-16" value="1">
+                                <input type="number" id="retireM" placeholder="月" class="border p-2 rounded w-16" value="8" min="1" max="12" oninput="if(this.value>12)this.value=12;if(this.value<1 && this.value!=='')this.value=1">
+                                <input type="number" id="retireD" placeholder="日" class="border p-2 rounded w-16" value="1" min="1" max="31" oninput="if(this.value>31)this.value=31;if(this.value<1 && this.value!=='')this.value=1">
                             </div>
                         </div>
 
@@ -166,14 +166,19 @@
                         <button onclick="toggleModal(true)" class="text-xs text-blue-500 hover:text-blue-700"><i class="fas fa-question-circle"></i> 公式說明</button>
                     </div>
                     
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center mb-4">
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center mb-4">
                         <div class="p-3 bg-gray-50 rounded">
                             <div class="text-xs text-gray-500">退休年齡</div>
                             <div class="text-lg font-bold text-gray-800" id="resAge">--</div>
                         </div>
                         <div class="p-3 bg-gray-50 rounded">
-                            <div class="text-xs text-gray-500">採計年資 (指標)</div>
+                            <div class="text-xs text-gray-500">採計年資</div>
                             <div class="text-xl font-bold text-gray-800" id="resSeniority">--</div>
+                        </div>
+                        <!-- 新增指標數區塊 -->
+                        <div class="p-3 bg-purple-50 rounded border border-purple-100">
+                            <div class="text-xs text-purple-700 font-bold" title="年資+年齡">指標數 (85制)</div>
+                            <div class="text-xl font-bold text-purple-800" id="resIndex">--</div>
                         </div>
                         <div class="p-3 bg-gray-50 rounded">
                             <div class="text-xs text-gray-500">所得替代率</div>
@@ -766,7 +771,11 @@
             elAge.textContent = `${rAgeY}歲 ${rAgeM}月 ${rAgeD}日`;
             elAge.className = (rAgeY < 58 && !isIndex85Qualified) ? "text-lg font-bold text-red-600" : "text-lg font-bold text-green-700";
 
-            document.getElementById('resSeniority').textContent = `${senY}年 ${senM}月 (${indexValue})`;
+            document.getElementById('resSeniority').textContent = `${senY}年 ${senM}月`; // 移除括號內的指標數，改由獨立區塊顯示
+            
+            // 填入指標數
+            document.getElementById('resIndex').textContent = indexValue;
+
             document.getElementById('resRate').textContent = `${replaceRate.toFixed(1)}%`;
             document.getElementById('resPension').textContent = formatMoney(finalPension);
             document.getElementById('resPensionNote').textContent = pensionNote;
